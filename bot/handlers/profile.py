@@ -1,8 +1,11 @@
+import logging
 from telegram import Update
 from telegram.ext import ContextTypes
 from sqlalchemy import select
 from db.models import SessionLocal, User, Subscription
 from bot.marzban_api import get_user_info
+
+logger = logging.getLogger(__name__)
 
 async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_id = update.effective_user.id
@@ -16,6 +19,7 @@ async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         marzban_info = await get_user_info(user.marzban_username)
         if not marzban_info:
+            logger.info("No Marzban info found for user, likely no active access")
             await update.message.reply_text("В Marzban нет активного доступа. Оформи /trial или оплату.")
             return
 

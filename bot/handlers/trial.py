@@ -1,9 +1,11 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from telegram import Update
 from telegram.ext import ContextTypes
 from sqlalchemy import select
 from db.models import SessionLocal, User, Subscription
 from bot.marzban_api import create_user
+logger = logging.getLogger(__name__)
 
 
 TRIAL_DAYS = 1
@@ -34,8 +36,10 @@ async def trial(update: Update, context: ContextTypes.DEFAULT_TYPE):
         expire_ts = int(end_at.timestamp())
         data_limit_bytes = TRIAL_LIMIT_MB * 1024 * 1024
 
+        logger.debug(f"Creating trial user in Marzban: {user.marzban_username}")
         ok = await create_user(user.marzban_username, data_limit=data_limit_bytes, expire_at=expire_ts)
         if not ok:
+            logger.error("Failed to create trial user in Marzban")
             await update.message.reply_text("Не удалось выдать тестовый доступ. Попробуй позже.")
             return
 
@@ -48,6 +52,7 @@ async def trial(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         session.add(sub)
         await session.commit()
+        logger.info(f"Trial granted for tg_id={tg_id} marzban={user.marzban_username} until {end_at}")
 
         await update.message.reply_text(
             f"Выдан тестовый доступ на {TRIAL_DAYS} дн., лимит {TRIAL_LIMIT_MB} MB. Смотри /profile"

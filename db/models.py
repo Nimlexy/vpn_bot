@@ -1,12 +1,17 @@
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, ForeignKey
 from datetime import datetime, timezone
 
-from config import POSTGRES_DSN
+from config import DATABASE_URL, LOG_LEVEL
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=getattr(logging, LOG_LEVEL, logging.DEBUG))
 
 Base = declarative_base()
-engine = create_async_engine(POSTGRES_DSN, echo=False)
+logger.debug(f"Creating DB engine for {DATABASE_URL}")
+engine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
 class User(Base):
