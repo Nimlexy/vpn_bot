@@ -28,14 +28,35 @@ async def _login_if_needed(session: aiohttp.ClientSession) -> bool:
 
     url = f"{MARZBAN_API_URL.rstrip('/')}/api/admin/token"
     try:
-        logger.debug("Logging in to Marzban to obtain token...")
-        async with session.post(url, json={"username": MARZBAN_USERNAME, "password": MARZBAN_PASSWORD}, timeout=15) as resp:
+        logger.debug("Logging in to Marzban to obtain token (json)...")
+        async with session.post(
+            url,
+            json={"username": MARZBAN_USERNAME, "password": MARZBAN_PASSWORD},
+            timeout=15,
+        ) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 _cached_token = data.get("access_token") or data.get("token")
-                logger.info("Obtained Marzban token via admin credentials")
+                logger.info("Obtained Marzban token via admin credentials (json)")
                 return _cached_token is not None
-            logger.error(f"Login failed with status {resp.status}")
+        # Fallback: OAuth2PasswordRequestForm-style (application/x-www-form-urlencoded)
+        logger.debug("Login fallback (form-encoded) ...")
+        form_data = aiohttp.FormData()
+        form_data.add_field("username", MARZBAN_USERNAME)
+        form_data.add_field("password", MARZBAN_PASSWORD)
+        form_data.add_field("grant_type", "password")
+        async with session.post(
+            url,
+            data=form_data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=15,
+        ) as resp2:
+            if resp2.status == 200:
+                data = await resp2.json()
+                _cached_token = data.get("access_token") or data.get("token")
+                logger.info("Obtained Marzban token via admin credentials (form)")
+                return _cached_token is not None
+            logger.error(f"Login failed with status {resp2.status}")
             return False
     except aiohttp.ClientError:
         logger.exception("Failed to login to Marzban")
